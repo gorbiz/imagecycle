@@ -1,1 +1,62 @@
-../time-lapse/recent.html
+<html>
+  <head>
+    <title>image cycler</title>
+
+    <style type="text/css">
+      body { margin: 0; }
+      #snap { height: 100%; }
+    </style>
+  </head>
+
+  <body>
+    <img id="snap" alt="loading..." />
+
+    <script>
+      document.getElementById('snap').style.transform = 'rotate(' + (window.location.search.match(/[\?\&]{1}r=(\-?[0-9]+)/i)||[,0])[1] + 'deg)';
+
+      var limit = (window.location.search.match(/[\?\&]{1}n=([0-9]+)/i)||[])[1] || 30;
+
+      getImages('recent-snaps.list', function(urls) {
+        urls = urls.slice(limit * -1);
+        console.debug('gotImages');
+        preload(urls, function(imgs) {
+
+          var i = 0;
+          setInterval(function() {
+            document.getElementById('snap').src = urls[i++];
+            if (i >= urls.length-1) i = 0;
+          }, 33);
+        });
+      });
+
+      function getImages(listUrl, next) {
+        var r = new XMLHttpRequest();
+        r.open("GET", listUrl, true);
+        r.onreadystatechange = function() {
+          if (r.readyState != 4 || r.status != 200) return;
+          next(r.responseText.split('\n'));
+        }
+        r.send();
+      }
+
+      function preload(urls, next) {
+        var n = urls.length - 1;
+        var imgs = urls.map(function(url) {
+          var img = new Image();
+          img.onload  = function(x) {
+            console.debug('loading... ' + n);
+            if (--n == 0) return next(imgs);
+          };
+          img.src = url;
+          return img;
+        });
+      }
+
+      // reload every minute; we get ~1 new snap every minute :)
+      // TODO just rerun the initial script instead (after clearing the interval)
+      // TODO only update when `recent-snaps.list` has been changed
+      // CONSIDER actually rendering all IMG elements & hide all but one -- trying to fix issue with sometimes missing frames...
+      setTimeout(function() { window.location.reload(1); }, 60000);
+    </script>
+  </body>
+</html>
